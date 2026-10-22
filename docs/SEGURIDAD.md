@@ -1,5 +1,11 @@
 # Controles de participación y seguridad
 
+## Credenciales y publicación
+
+Las plantillas `.env.example` contienen valores vacíos o genéricos. Las claves de sesión/HMAC, contraseñas de bases, correo y credenciales administrativas reales se configuran en Coolify o en archivos privados. Los archivos `.env`, `.env.coolify`, claves privadas, respaldos SQL y artefactos locales están excluidos de Git y de las imágenes Docker.
+
+Cada repositorio incluye el workflow `Secret scanning`, que revisa todo el historial con Gitleaks y oculta los valores detectados en los logs. Una dirección de API es información pública: `VITE_API_URL` se incorpora al JavaScript del navegador y nunca debe incluir credenciales. Las claves secretas pertenecen exclusivamente al backend.
+
 ## Qué se puede garantizar
 
 La base de datos impide registrar dos respuestas para la misma invitación o para un identificador de participación sujeto a unicidad. El servidor verifica los datos y el estado; modificar JavaScript o el almacenamiento del navegador no elimina las restricciones persistidas. La garantía depende de mantener la base, las claves HMAC y el identificador de encuesta estables.

@@ -1,5 +1,7 @@
 # Backend de gestión de encuestas
 
+La plantilla pública `.env.example` contiene valores genéricos y campos de credenciales vacíos. Las claves reales y contraseñas se guardan en Coolify o en archivos privados excluidos de Git e imágenes. El workflow `Secret scanning` revisa todo el historial con Gitleaks y oculta los valores detectados en sus logs.
+
 Backend Flask modular basado en la estructura de [buzon-ciudadano-backend](https://github.com/IntendenciaDeLavalleja/buzon-ciudadano-backend): factoría, blueprints públicos y administrativos, SQLAlchemy, Flask-Migrate, Marshmallow, WTForms, Argon2, Flask-Login, correo y Redis. Las funciones del buzón que corresponden a denuncias, mapas, archivos MinIO y agenda no se incluyen porque no forman parte de la encuesta.
 
 ## Configuración y ejecución

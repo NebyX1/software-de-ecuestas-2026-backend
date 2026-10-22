@@ -11,3 +11,23 @@ htmlcov/
 instance/
 *.sqlite
 *.db
+
+# Private credentials and local exports must stay outside Git.
+artifacts/
+backups/
+secrets/
+credentials/
+.envrc
+.secrets*
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+*.sql
+*.sql.gz
+credentials*.json
+*-credentials*.json
+preview-access.json
+e2e-config.json
