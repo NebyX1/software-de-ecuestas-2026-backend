@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 
 def boolean(name, default=False):
-    return os.environ.get(name, str(default)).lower() in ('true', '1', 'yes')
+    return os.environ.get(name, str(default)).strip().lower() in ('true', '1', 'yes')
 
 
 def is_https_origin(value):
@@ -70,7 +70,7 @@ def build_config(name):
         MAIL_DEFAULT_SENDER=os.environ.get('MAIL_DEFAULT_SENDER'),
         MAIL_SUPPRESS_SEND=testing,
         MAIL_DEBUG=False,
-        MAIL_TIMEOUT=10,
+        MAIL_TIMEOUT=int(os.environ.get('MAIL_TIMEOUT', '10')),
         ADMIN_OTP_TTL_SECONDS=600,
         ADMIN_OTP_MAX_ATTEMPTS=5,
         SURVEY_ID=os.environ.get('SURVEY_ID', 'lavalleja-2026'),
@@ -100,6 +100,12 @@ def validate_config(app):
             raise ValueError(f'{key} is required')
     if c['MAIL_USE_TLS'] and c['MAIL_USE_SSL']:
         raise ValueError('Choose MAIL_USE_TLS or MAIL_USE_SSL, not both')
+    if c['MAIL_TIMEOUT'] <= 0:
+        raise ValueError('MAIL_TIMEOUT must be a positive number of seconds')
+    if bool(c['MAIL_USERNAME']) != bool(c['MAIL_PASSWORD']):
+        raise ValueError('Configure both MAIL_USERNAME and MAIL_PASSWORD, or neither for an unauthenticated relay')
+    if c['MAIL_PORT'] == 465 and not c['MAIL_USE_SSL']:
+        raise ValueError('MAIL_PORT=465 requires MAIL_USE_SSL=true (implicit TLS)')
     if c['ENVIRONMENT'] != 'production':
         return
     for key in ('SECRET_KEY', 'IDENTITY_HMAC_KEY'):

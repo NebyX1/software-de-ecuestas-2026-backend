@@ -46,6 +46,27 @@ def rotate_secret():
     click.echo(secrets.token_urlsafe(48))
 
 
+@click.command('check-mail')
+@with_appcontext
+def check_mail():
+    """Comprueba conexión, TLS y autenticación SMTP sin enviar mensajes."""
+    from flask import current_app
+    from app.extensions import mail
+    from app.services.mail_service import log_mail_failure
+    state = current_app.extensions['mail']
+    if state.suppress:
+        raise click.ClickException('El envío está suprimido en este entorno; no se comprobó SMTP.')
+    try:
+        with mail.connect():
+            pass
+    except Exception as exc:
+        log_mail_failure(exc, event='smtp_check_failed')
+        raise click.ClickException('Falló la comprobación SMTP. Revisá el diagnóstico smtp_check_failed en los logs.') from None
+    auth = 'verificada' if state.username and state.password else 'no configurada (relay sin autenticación)'
+    security = 'SSL/TLS' if state.use_ssl else 'STARTTLS' if state.use_tls else 'sin TLS'
+    click.echo(f'Conexión SMTP correcta. Seguridad: {security}. Autenticación: {auth}. No se envió ningún mensaje.')
+
+
 @click.command('seed-data')
 @with_appcontext
 def seed_data():

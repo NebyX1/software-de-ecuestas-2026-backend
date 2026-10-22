@@ -129,7 +129,7 @@ def test_disabled_account_invalidates_pending_challenge(platform_app):
     assert client.get('/admin/dashboard').status_code == 302
 
 
-def test_smtp_failure_fails_closed(platform_app, monkeypatch):
+def test_smtp_failure_fails_closed(platform_app, monkeypatch, caplog):
     client = platform_app.test_client()
     client.get('/admin/login')
     with client.session_transaction() as session:
@@ -143,6 +143,43 @@ def test_smtp_failure_fails_closed(platform_app, monkeypatch):
         assert '2fa_challenge' not in session
     with platform_app.app_context():
         assert TwoFactorCode.query.one().consumed_at is not None
+    assert 'admin_otp_delivery_failed' in caplog.text
+    assert '"error_type": "OSError"' in caplog.text
+    assert '"reason": "network_failed"' in caplog.text
+    assert 'request_id' in caplog.text
+
+
+def test_accepted_otp_remains_usable_when_smtp_quit_fails(platform_app, monkeypatch):
+    import smtplib
+    import ssl
+    from email import message_from_bytes
+    state = platform_app.extensions['mail']
+    state.suppress, state.use_ssl, state.use_tls = False, True, False
+    sent = []
+    class SMTP:
+        def set_debuglevel(self, level):
+            assert level == 0
+        def sendmail(self, sender, recipients, body, *args):
+            sent.append(body)
+            return {}
+        def quit(self):
+            raise smtplib.SMTPServerDisconnected('connection closed after DATA was accepted')
+        def close(self):
+            pass
+    def connect(*args, **kwargs):
+        assert kwargs['context'].verify_mode == ssl.CERT_REQUIRED
+        return SMTP()
+    monkeypatch.setattr('app.services.mail_service.smtplib.SMTP_SSL', connect)
+    client = platform_app.test_client()
+    client.get('/admin/login')
+    with client.session_transaction() as session:
+        verifier = session['captcha_result']
+    result = client.post('/admin/login', data={'email': 'superadmin@example.org', 'password': 'correct-password-2026!', 'captcha': verifier})
+    assert result.status_code == 302 and result.location.endswith('/admin/2fa')
+    body = message_from_bytes(sent[0]).get_payload(decode=True).decode('utf-8')
+    code = re.search(r'\b\d{6}\b', body).group()
+    assert client.post('/admin/2fa', data={'code': code}).status_code == 302
+    assert client.get('/admin/dashboard').status_code == 200
 
 
 def test_admin_rbac_and_export_are_protected(platform_app):

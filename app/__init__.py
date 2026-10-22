@@ -88,8 +88,8 @@ def create_app(config_name=None, overrides=None):
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(public_bp)
     app.register_blueprint(simulation_bp, url_prefix='/api/simulation')
-    from .commands import create_admin, rotate_secret, seed_data, cleanup_survey
-    for command in (create_admin, rotate_secret, seed_data, cleanup_survey):
+    from .commands import create_admin, rotate_secret, seed_data, cleanup_survey, check_mail
+    for command in (create_admin, rotate_secret, seed_data, cleanup_survey, check_mail):
         app.cli.add_command(command)
     register_error_handlers(app)
     return app

@@ -15,7 +15,7 @@ from app.forms.auth import LoginForm, TwoFactorForm
 from app.forms.admin import AdminUserCreateForm, AdminUserUpdateForm
 from app.utils.security import log_activity, digest, csv_safe
 from app.utils.time import utcnow
-from app.services.mail_service import send_2fa_email
+from app.services.mail_service import send_2fa_email, log_mail_failure
 from app.services.admin_session_service import create_auth_session, revoke_auth_session
 from app.services.device_metadata import METADATA_FILTERS, metadata_display_values
 from . import admin_bp
@@ -64,10 +64,11 @@ def login():
                 db.session.commit()
                 try:
                     send_2fa_email(user, code)
-                except Exception:
+                except Exception as exc:
+                    # Record the delivery cause before database cleanup can fail.
+                    log_mail_failure(exc, user_id=user.id)
                     tf_code.consumed_at = utcnow()
                     db.session.commit()
-                    current_app.logger.error('Admin OTP delivery failed user_id=%s', user.id)
                     flash('No pudimos enviar el código de verificación. Intentá más tarde.', 'error')
                     status = 503
                 else:

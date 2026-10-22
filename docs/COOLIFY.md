@@ -95,6 +95,30 @@ En una instancia inicial también se puede configurar `RUN_MIGRATIONS=true` para
 
 La plantilla y los archivos privados preparados usan `RUN_MIGRATIONS=true` para esa primera instancia. Coolify omite el comando pre-deployment cuando todavía no hay un contenedor anterior, y su post-deployment ocurre después de declarar completado el despliegue: para el primer arranque usar el entrypoint ya incluido o un job previo explícito. No dejar la creación del esquema pendiente hasta después del healthcheck.
 
+## Diagnóstico de correo y doble factor
+
+Desde la terminal del contenedor del **backend en producción**, ejecutar:
+
+```sh
+python -m flask --app wsgi:app check-mail
+```
+
+El comando usa las variables efectivas de ese proceso y el mismo transporte SMTP que el doble factor. Comprueba conexión, certificado TLS y autenticación sin enviar correo. Una prueba desde otra máquina no comprueba la salida de red, DNS ni certificados del contenedor. Para SSL implícito en el puerto 465, usar `MAIL_USE_SSL=true` y `MAIL_USE_TLS=false`; para STARTTLS, configurar el puerto indicado por el proveedor y `MAIL_USE_TLS=true`, `MAIL_USE_SSL=false`. `MAIL_TIMEOUT` permite ajustar el timeout por operación de socket (10 segundos por defecto). No desactivar la validación del certificado para resolver errores TLS.
+
+Los fallos del acceso administrativo se escriben en stderr como JSON con `event=admin_otp_delivery_failed`; los del comando, con `event=smtp_check_failed`. Incluyen `request_id` (coincide con la cabecera `X-Request-ID` de la respuesta), `user_id` cuando corresponde, host/puerto SMTP, SSL/STARTTLS, timeout, presencia de autenticación/remitente, etapa, clase de excepción, código SMTP y estado ampliado cuando existen. `trace` conserva archivos, funciones y líneas sin mensajes de excepción ni variables locales. No se registran contraseñas, destinatarios, cuerpos, códigos de acceso ni respuestas SMTP completas.
+
+| Campo `reason` | Qué revisar desde el contenedor |
+|---|---|
+| `dns_failed` | Resolución del host SMTP. |
+| `connection_timeout`, `connection_refused`, `network_failed` | Puerto, firewall y salida SMTP del servidor/proveedor de hosting. |
+| `tls_certificate_invalid`, `tls_failed` | Nombre del host, certificado/cadena CA y modalidad SSL/STARTTLS. |
+| `authentication_rejected` | Código SMTP, credenciales y permisos de autenticación de la cuenta. |
+| `sender_rejected`, `recipient_rejected`, `message_rejected` | Código SMTP y restricciones del remitente/destinatario o política del proveedor. |
+| `greeting_rejected`, `smtp_feature_unsupported`, `connection_closed` | Política SMTP/EHLO y capacidades del servidor. |
+| `unexpected_error` | Clase de excepción y archivos/líneas en `trace`. |
+
+Un error de `QUIT` después de aceptar el mensaje genera `event=smtp_disconnect_failed` en nivel WARNING y no invalida el código enviado. Si el envío falla, el acceso sigue respondiendo 503 y el desafío queda invalidado. La aceptación SMTP no confirma la llegada a la bandeja final; esa entrega se revisa con los logs del proveedor y la carpeta de correo no deseado.
+
 ## Health checks y verificación final
 
 - Backend: `GET /health/live` verifica proceso; `GET /health/ready` verifica base, esquema y Redis. Coolify debe usar readiness para decidir disponibilidad. El host de su llamada debe estar permitido.
