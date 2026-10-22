@@ -48,7 +48,7 @@ Capturas locales en `artifacts/`: inicio de encuesta en escritorio/móvil y dash
 
 El SMTP de este recorrido es un servidor real local de pruebas, no un correo enviado al proveedor público. La participación no usa proveedor de mensajería: el número declarado se comprueba por formato y unicidad, sin verificar titularidad. El verificador numérico usa Redis real en el recorrido y las pruebas de concurrencia; se probaron caducidad, intentos, vinculación, consumo único, campo trampa, tiempo mínimo y recuperación después de un fallo de base. Turnstile es opcional y tiene pruebas de hostname/acción y fallos con transportes simulados.
 
-Se probó HTTPS mediante un proxy TLS local y certificado temporal, con la misma normalización de IP/protocolo y Host prevista para Coolify. El navegador completó los POST de encuesta y administración. Una petición con token CSRF válido y Referer de otro origen fue rechazada con 400, lo que también acredita que Flask recibía el protocolo HTTPS. Se corrigieron tanto el encabezado como la etiqueta HTML de Referrer-Policy: `same-origin` permite el control SSL estricto de Flask-WTF y no envía la referencia a terceros. Esto no sustituye el certificado ni la configuración de red del dominio definitivo.
+La conexión actual utiliza únicamente `VITE_API_URL` en el frontend y CORS con credenciales en el backend. La referencia de la API debe corresponder al frontend autorizado o al propio backend; las referencias ajenas se rechazan aun con un token CSRF válido. El panel administrativo conserva la comprobación de su propio origen. `Referrer-Policy: strict-origin` en el frontend envía solo el origen, sin rutas de invitación. Las pruebas HTTPS locales no sustituyen los certificados ni la entrega SMTP del dominio definitivo.
 
 ## Auditoría nativa
 
@@ -71,12 +71,12 @@ npm test --prefix tests/e2e
 
 `prepare.mjs` requiere el conjunto iniciado con `.env.e2e`, `SURVEY_ID=local-verification-*` y `RATELIMIT_KEY_PREFIX=local-verification-e2e`; no puede preparar ni limpiar producción. Solo elimina contadores de ese prefijo reservado, sin vaciar Redis ni desactivar límites. En Linux el intérprete del entorno se encuentra en `backend/.venv/bin/python`.
 
-Los workflows incluidos se revisaron y sus comandos principales se ejecutaron localmente. No se han ejecutado GitHub Actions remotos porque este trabajo no publicó cambios ni creó repositorios remotos nuevos.
+Los workflows incluidos se revisaron y sus comandos principales se ejecutaron localmente. Los resultados actualizados de la conexión directa por `VITE_API_URL` están en `PRUEBA_COOLIFY.md`.
 
 ## Pendiente antes de admitir respuestas públicas
 
-- Crear/configurar los dos repositorios de destino y los recursos de Coolify; publicar `uypolls.online` y `mapi.uypolls.online` con HTTPS, verificar su DNS y completar la red interna.
-- Configurar IP/CIDR del proxy y comprobar IP real desde dos conexiones distintas, cookies seguras y CSRF por HTTPS en el dominio definitivo. El flujo HTTPS ya se probó localmente; la topología real de Coolify sigue pendiente. Se reconsulta DNS del backend para admitir despliegues independientes.
+- Los dos repositorios ya están publicados. Configurar los recursos de Coolify y publicar `uypolls.online` y `mapi.uypolls.online` con HTTPS, verificar su DNS y conectar MariaDB/Redis al backend.
+- Comprobar IP real desde dos conexiones distintas, cookies seguras, CORS y CSRF por HTTPS en el dominio definitivo. El backend usa `TRUSTED_PROXY_COUNT=1` para el proxy de Coolify. El frontend no requiere configurar redes privadas ni CIDR.
 - Configurar SMTP público y comprobar entrega real del código, SPF/DKIM y capacidad del remitente.
 - Si se decide activar Turnstile opcional, crear su widget y probar claves públicas/privadas, dominio y acción. No es un requisito para la operación autónoma del verificador local.
 - Probar Facebook e Instagram en dispositivos físicos iOS y Android. La emulación móvil de Chromium no verifica los navegadores internos de esas aplicaciones.

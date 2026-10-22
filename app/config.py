@@ -85,6 +85,7 @@ def build_config(name):
         SURVEY_MIN_FILL_SECONDS=int(os.environ.get('SURVEY_MIN_FILL_SECONDS', '15' if production else '0')),
         TURNSTILE_REQUIRED=boolean('TURNSTILE_REQUIRED', False),
         TURNSTILE_SECRET_KEY=os.environ.get('TURNSTILE_SECRET_KEY', ''),
+        TURNSTILE_SITE_KEY=os.environ.get('TURNSTILE_SITE_KEY', ''),
         TURNSTILE_HOSTNAME=os.environ.get('TURNSTILE_HOSTNAME', ''),
     )
     if testing:
@@ -127,8 +128,8 @@ def validate_config(app):
                (frontend_host == host[1:] or frontend_host.endswith(host)))
                for host in c['TRUSTED_HOSTS']):
         raise ValueError('TRUSTED_HOSTS must include the public FRONTEND_URL hostname')
-    if c['TURNSTILE_REQUIRED'] and not all(c.get(k) for k in ('TURNSTILE_SECRET_KEY', 'TURNSTILE_HOSTNAME')):
-        raise ValueError('TURNSTILE_SECRET_KEY and TURNSTILE_HOSTNAME are required')
+    if c['TURNSTILE_REQUIRED'] and not all(c.get(k) for k in ('TURNSTILE_SECRET_KEY', 'TURNSTILE_SITE_KEY', 'TURNSTILE_HOSTNAME')):
+        raise ValueError('TURNSTILE_SECRET_KEY, TURNSTILE_SITE_KEY and TURNSTILE_HOSTNAME are required')
     if c['SURVEY_MIN_FILL_SECONDS'] < 0:
         raise ValueError('SURVEY_MIN_FILL_SECONDS must not be negative')
     if not 60 <= c['SURVEY_CHALLENGE_TTL_SECONDS'] <= 600 or not 1 <= c['SURVEY_CHALLENGE_MAX_ATTEMPTS'] <= 10:

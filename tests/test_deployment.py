@@ -89,10 +89,67 @@ def test_https_post_checks_the_referer_on_each_domain(two_domain_app, host, othe
     assert valid.status_code == 422
     assert valid.get_json()['code'] == 'validation_error'
     foreign = client.post('/api/survey/links', base_url=origin, json={},
-        headers={'X-CSRFToken': csrf, 'Referer': 'https://' + other_host + '/participar'})
+        headers={'X-CSRFToken': csrf, 'Referer': 'https://untrusted.example/participar'})
     assert foreign.status_code == 400
     assert foreign.get_json()['code'] == 'csrf_invalid'
     assert client.get('/admin/login', base_url=origin).status_code == 200
+
+
+def test_backend_accepts_frontend_origin_with_bound_csrf_and_credentials(two_domain_app):
+    client = two_domain_app.test_client()
+    backend = 'https://mapi.uypolls.online'
+    frontend = 'https://uypolls.online'
+    response = client.get('/api/csrf', base_url=backend, headers={'Origin': frontend})
+    token = response.json['csrf_token']
+    assert response.headers['Access-Control-Allow-Origin'] == frontend
+    assert response.headers['Access-Control-Allow-Credentials'] == 'true'
+    valid = client.post('/api/survey/links', base_url=backend, json={}, headers={
+        'Origin': frontend, 'Referer': frontend + '/', 'X-CSRFToken': token})
+    assert valid.status_code == 422  # Passed CSRF, reached request validation.
+    assert valid.json['code'] == 'validation_error'
+    assert valid.headers['Access-Control-Allow-Origin'] == frontend
+    stranger = two_domain_app.test_client()
+    assert stranger.post('/api/survey/links', base_url=backend, json={}, headers={
+        'Origin': frontend, 'Referer': frontend + '/', 'X-CSRFToken': token}).status_code == 400
+
+
+@pytest.mark.parametrize('headers', [
+    {'Origin': 'https://uypolls.online', 'Referer': 'https://uypolls.online/'},  # No token.
+    {'Origin': 'https://uypolls.online', 'X-CSRFToken': 'valid'},  # No Referer.
+    {'Origin': 'https://evil.example', 'Referer': 'https://uypolls.online/', 'X-CSRFToken': 'valid'},
+    {'Origin': 'null', 'Referer': 'https://uypolls.online/', 'X-CSRFToken': 'valid'},
+    {'Origin': 'https://uypolls.online', 'Referer': 'https://uypolls.online.evil.test/', 'X-CSRFToken': 'valid'},
+    {'Origin': 'https://uypolls.online', 'Referer': 'http://uypolls.online/', 'X-CSRFToken': 'valid'},
+    {'Origin': 'https://uypolls.online', 'Referer': 'https://uypolls.online:8443/', 'X-CSRFToken': 'valid'},
+])
+def test_cross_origin_api_rejects_invalid_csrf_or_origin(two_domain_app, headers):
+    client = two_domain_app.test_client()
+    backend = 'https://mapi.uypolls.online'
+    token = client.get('/api/csrf', base_url=backend).json['csrf_token']
+    response = client.post('/api/survey/links', base_url=backend, json={},
+        headers={key: token if value == 'valid' else value for key, value in headers.items()})
+    assert response.status_code == 400
+    assert response.json['code'] == 'csrf_invalid'
+
+
+def test_admin_still_requires_its_own_https_referer(two_domain_app):
+    client = two_domain_app.test_client()
+    backend = 'https://mapi.uypolls.online'
+    token = client.get('/api/csrf', base_url=backend).json['csrf_token']
+    assert client.post('/admin/logout', base_url=backend,
+        headers={'X-CSRFToken': token, 'Referer': 'https://uypolls.online/'}).status_code == 400
+    assert client.post('/admin/logout', base_url=backend,
+        headers={'X-CSRFToken': token, 'Referer': backend + '/admin/'}).status_code == 302
+
+
+def test_optional_widget_config_comes_from_backend_without_exposing_secrets(two_domain_app):
+    two_domain_app.config.update(TURNSTILE_SITE_KEY='public-widget-key', TURNSTILE_SECRET_KEY='private-server-key')
+    client = two_domain_app.test_client()
+    assert client.get('/api/csrf').json['turnstileSiteKey'] == ''
+    two_domain_app.config['TURNSTILE_REQUIRED'] = True
+    response = client.get('/api/csrf')
+    assert response.json['turnstileSiteKey'] == 'public-widget-key'
+    assert b'private-server-key' not in response.data
 
 
 def test_two_domains_keep_independent_host_cookies_and_exact_cors(two_domain_app):

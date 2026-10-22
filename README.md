@@ -19,7 +19,7 @@ La variante `create-admin nombre correo@example.org` solicita la contraseña ocu
 
 `FLASK_CONFIG=production` exige MariaDB, secretos independientes, Redis, SMTP con TLS/SSL, orígenes HTTPS explícitos y hosts permitidos. La participación pública utiliza un número verificador propio almacenado en Redis, de un solo uso y con intentos y vencimiento limitados; no requiere proveedores externos ni envía SMS. Turnstile es una capa adicional opcional: solo configurar sus credenciales si se activa `TURNSTILE_REQUIRED=true`. La verificación administrativa por correo permanece obligatoria.
 
-En la carpeta de trabajo completa se preparó `.env.coolify` con dos claves aleatorias independientes, para importar como variables solo de runtime. El backend se publica en `https://mapi.uypolls.online`, con el panel en `/admin/login`. `FRONTEND_URL` y CORS conservan `https://uypolls.online`; los hosts permitidos incluyen los dos dominios. La encuesta usa su proxy `/api` y los contenedores se comunican por red privada. Las bases y el SMTP quedan pendientes por indicación del responsable. Ese archivo es privado y está excluido de Git, ZIP e imágenes. `.env.example` conserva el inventario sin secretos. La plantilla activa la migración inicial mediante `RUN_MIGRATIONS=true`; usar una sola instancia y separar las migraciones antes de escalar. La guía completa está en `docs/COOLIFY.md` dentro de las exportaciones.
+En la carpeta de trabajo completa se preparó `.env.coolify` con dos claves aleatorias independientes, para importar como variables solo de runtime. El backend se publica en `https://mapi.uypolls.online`, con el panel en `/admin/login`. `FRONTEND_URL` y CORS conservan `https://uypolls.online`; los hosts permitidos incluyen los dos dominios. El frontend configura únicamente `VITE_API_URL=https://mapi.uypolls.online` y se conecta directamente a esta API con credenciales y CSRF. Las bases y el SMTP quedan pendientes por indicación del responsable. Ese archivo es privado y está excluido de Git, ZIP e imágenes. `.env.example` conserva el inventario sin secretos. La plantilla activa la migración inicial mediante `RUN_MIGRATIONS=true`; usar una sola instancia y separar las migraciones antes de escalar. La guía completa está en `docs/COOLIFY.md` dentro de las exportaciones.
 
 ## Estructura
 
@@ -47,7 +47,7 @@ Las respuestas incorporan metadatos descriptivos del dispositivo, sistema operat
 
 | Método | Ruta | Función |
 |---|---|---|
-| GET | `/api/csrf` | Token de CSRF de la sesión para `X-CSRFToken` |
+| GET | `/api/csrf` | Token de CSRF de la sesión para `X-CSRFToken` y clave pública opcional de Turnstile |
 | POST | `/api/survey/links` | Crear invitación ligada al navegador; Turnstile solo si se activa |
 | POST | `/api/survey/session` | Validar propiedad, vigencia y estado del enlace |
 | POST | `/api/survey/challenge` | Emitir verificador local ligado a la invitación y al navegador |
@@ -59,7 +59,7 @@ Las condiciones de localidad, pertenencia y evaluación municipal se validan jun
 
 ## Coolify y redes
 
-Cada carpeta `backend/` y `frontend/` se puede publicar como repositorio independiente. Para este backend seleccionar Dockerfile, puerto `5000`, health check `/health/ready` y copiar las variables de `.env.example`. El frontend suministrado hace proxy de `/api`, `/admin` y `/public` para mantener cookies y CSRF en el mismo origen. MariaDB y Redis deben estar en red privada; no exponer sus puertos públicamente. El proxy de Coolify debe servir HTTPS.
+Cada carpeta `backend/` y `frontend/` se puede publicar como repositorio independiente. Para este backend seleccionar Dockerfile, puerto `5000`, health check `/health/ready` y copiar las variables de `.env.example`. El frontend configura `VITE_API_URL` con la URL pública de este backend. CORS admite el origen exacto configurado en `CORS_ORIGINS` con credenciales. La API conserva la validación CSRF de sesión y admite la referencia del frontend autorizado; los formularios administrativos exigen el mismo origen del backend. MariaDB y Redis deben estar en red privada; no exponer sus puertos públicamente. El proxy de Coolify debe servir HTTPS.
 
 `TRUSTED_PROXY_COUNT` debe coincidir con los proxies que realmente fijan `X-Forwarded-For` y `X-Forwarded-Proto`. El nginx incluido sobrescribe esos valores; usar `1` entre nginx y Flask, y aislar el backend para que no pueda recibirse tráfico directo con cabeceras falsificadas. Si se expone el backend directamente mediante otra cadena de proxies, ajustar y verificar la IP percibida antes de lanzar publicidad. `TRUSTED_HOSTS` incluye los nombres reales de frontend, backend y hosts usados en health checks. No usar comodines de CORS.
 
@@ -83,7 +83,7 @@ La configuración de habilitación, la generación y los accesos revocables dura
 
 Las respuestas de prueba no se guardan en MariaDB, Redis ni en almacenamiento del navegador. Permanecen en memoria en la pestaña; se envían a `/api/simulation/export.csv` solo para validar y generar el CSV de ejemplo. El celular se valida por formato y se descarta, sin reclamar unicidad. El CSV usa las mismas columnas, escape de fórmulas, UTF-8 con BOM y reglas condicionales que la exportación real; cada fila de prueba lleva un ID que comienza con `SIMULACION-`. Los verificadores aritméticos tienen un espacio de claves Redis separado y expiran automáticamente. No hay listado ni analítica de simulaciones. Recargar, salir o reiniciar descarta el progreso y el archivo en memoria; descargarlo antes.
 
-No requiere migraciones ni nuevas variables de entorno. La URL del acceso de prueba se deriva de `FRONTEND_URL` y las llamadas usan el proxy del frontend para conservar cookies y CSRF en el mismo origen.
+No requiere migraciones ni nuevas variables de entorno. La URL del acceso de prueba se deriva de `FRONTEND_URL` y las llamadas usan `VITE_API_URL` con cookies y CSRF del backend.
 
 ## Verificación
 

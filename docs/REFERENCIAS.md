@@ -20,7 +20,7 @@ Correcciones deliberadas de seguridad frente a la referencia: no degradar a lím
 
 Se conservan React, TypeScript y Vite y se adoptan la capa Axios, React Query y organización por funcionalidad de la referencia, con React Hook Form, Zod y Zustand. Se reutilizan los componentes, páginas y contenido de la encuesta de este repositorio para conservar su cuestionario y bifurcaciones.
 
-El frontend sirve el sitio y actúa como proxy para `/api`, `/admin` y los recursos del backend. Eso mantiene el flujo bajo un mismo origen HTTPS y evita depender de cookies de terceros en los navegadores internos de Meta. Cada carpeta contiene su Dockerfile y configuración independiente.
+El frontend sigue la conexión de la referencia: una sola variable `VITE_API_URL` define la URL pública del backend y Axios usa `withCredentials: true`. El backend configura CORS con el origen exacto del frontend y conserva CSRF. Los dominios HTTPS `uypolls.online` y `mapi.uypolls.online` permiten cookies de sesión del mismo sitio. Cada carpeta contiene su Dockerfile y configuración independiente.
 
 ## Control de participación
 

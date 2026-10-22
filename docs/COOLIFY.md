@@ -1,42 +1,53 @@
 # Despliegue en Coolify desde dos repositorios
 
-## Contenido para GitHub
+## Frontend
 
-`frontend/` y `backend/` son proyectos independientes. Cada uno incluye su Dockerfile, dependencias, ejemplo de variables y documentación. Se pueden subir los contenidos de cada carpeta a la raíz de su correspondiente repositorio. No crear repositorios anidados dentro de esta carpeta de trabajo.
+Repositorio: `NebyX1/software-de-ecuestas-2026-frontend`. Elegir Dockerfile, contexto raíz, puerto interno **8080**, dominio **https://uypolls.online** y healthcheck **/health**.
 
-Desde PowerShell, `./scripts/export-repositories.ps1` genera dos ZIP en `artifacts/` excluyendo secretos, Git, dependencias, builds y cachés. Los ZIP incluyen estas guías. Descomprimir cada uno en una carpeta nueva y crear allí el repositorio Git. No se crean ni publican repositorios remotos automáticamente.
+Configurar una sola variable, disponible durante el build:
 
-## Archivos privados preparados
+```dotenv
+VITE_API_URL=https://mapi.uypolls.online
+```
 
-En esta carpeta de trabajo se generaron `backend/.env.coolify` y `frontend/.env.coolify`, listos para importar en **Environment Variables > Developer view** de cada aplicación. `SECRET_KEY` e `IDENTITY_HMAC_KEY` ya contienen claves aleatorias independientes. Estos archivos están excluidos de Git, de los ZIP y de las imágenes Docker; conservar una copia privada y no regenerar las claves durante el relevamiento.
+El Dockerfile declara ese argumento. Al cambiar la URL, reconstruir la imagen. No se necesitan variables de runtime, alias Docker del backend ni CIDR del proxy en el frontend. Nginx sirve la aplicación estática y el navegador se comunica directamente con la API mediante Axios con credenciales, como en Buzón Ciudadano.
 
-Los dominios definidos por el responsable son **`https://uypolls.online`** para el frontend y **`https://mapi.uypolls.online`** para el backend. `FRONTEND_URL` y `CORS_ORIGINS` conservan el origen del frontend; `TRUSTED_HOSTS` incluye ambos dominios y los hosts de health checks. El hostname de Turnstile opcional sigue siendo `uypolls.online`; Turnstile permanece desactivado. Quedan pendientes los nombres/credenciales internos de MariaDB y Redis, el alias DNS privado del backend y el CIDR del proxy. Los campos del servidor, usuario, contraseña y remitente SMTP están vacíos. Los puertos y la configuración TLS de correo tienen sus valores estándar. Completar esos datos antes del primer despliegue. El backend no arranca en producción mientras falten su base o el SMTP obligatorio del acceso administrativo. El frontend rechaza los marcadores `PENDIENTE`, `localhost` como backend y una red proxy `/0`.
+## Backend
 
-`node scripts/prepare-coolify-env.mjs` permite volver a crear archivos que falten sin sobrescribir ningún archivo existente ni rotar sus claves. `.env.coolify` es un archivo de importación: no reemplaza `.env.local` ni se carga automáticamente en el desarrollo local. En repositorios ya separados también se puede copiar `.env.example` y completar sus valores manualmente.
+Repositorio: `NebyX1/software-de-ecuestas-2026-backend`. Elegir Dockerfile, contexto raíz, puerto interno **5000**, dominio **https://mapi.uypolls.online** y healthcheck **/health/ready**.
 
-En Coolify, configurar **todas las variables del backend solo en runtime**, con Build time en **Not available during build**. En el frontend, `BACKEND_UPSTREAM` y `TRUSTED_PROXY_CIDR` son solo runtime; únicamente `VITE_TURNSTILE_SITE_KEY`, si se usa, debe estar disponible durante el build. Seleccionar **Advanced > Build > Build arguments > Managed manually in Dockerfile**. Las variables `VITE_*` se incorporan al JavaScript público.
+Importar las variables de `backend/.env.coolify` como variables de **runtime**. El archivo es privado y está excluido de Git, imágenes y ZIP. Las claves aleatorias ya generadas se conservan. Completar las URLs privadas de MariaDB y Redis y los campos SMTP. El backend requiere SMTP para el acceso administrativo con código por correo.
 
-## Red y recursos
+La conexión pública queda configurada así:
 
-1. Crear MariaDB 11.4 y Redis 7.4 con almacenamiento persistente en Coolify. Configurar claves propias y guardar sus URLs internas. No publicar sus puertos hacia Internet.
-2. Crear una aplicación desde el repositorio del backend con build pack **Dockerfile**, contexto raíz, Dockerfile `/Dockerfile` y puerto interno **5000**. Asignar el dominio HTTPS **`https://mapi.uypolls.online`**, dirigido al puerto interno 5000, y habilitar certificado y redirección HTTP a HTTPS. Asociarla a la misma red privada que MariaDB, Redis y el frontend. Reservar además un alias DNS interno estable y exclusivo en **General > Network > Network Aliases**, por ejemplo `encuestas-backend`. El nombre visible del recurso en el panel y el registro DNS público `mapi` no crean ese alias privado.
-3. Crear otra aplicación desde el repositorio del frontend con build pack **Dockerfile**, contexto raíz, Dockerfile `/Dockerfile` y puerto **8080**. Asignar el dominio público **`https://uypolls.online`**. Configurar previamente su DNS hacia el servidor de Coolify y habilitar el certificado HTTPS y la redirección desde HTTP.
-4. Configurar `BACKEND_UPSTREAM=http://<alias-interno-del-backend>:5000` en el frontend, sin barra final, rutas ni consultas. El nombre debe resolverse desde su contenedor. Usar el mismo servidor y **destination network** en las dos aplicaciones y las bases. Si algún recurso es un stack Compose/Service, activar **Connect To Predefined Network** para incorporarlo a esa misma red. Estar en el mismo proyecto de Coolify no conecta por sí solo los contenedores. No usar `localhost` para referirse al otro contenedor.
-5. El frontend reenvía `/api/`, `/admin/` y `/public/` al backend a través de la red privada. La encuesta usa la API bajo `uypolls.online/api/`; la administración se abre directamente en `mapi.uypolls.online/admin/login`. El acceso administrativo por `/admin` del frontend también conserva compatibilidad, con una sesión independiente para cada host. No habilitar caché de API, panel ni rutas `/s/` en un CDN o proxy adicional.
+```dotenv
+FRONTEND_URL=https://uypolls.online
+CORS_ORIGINS=https://uypolls.online
+TRUSTED_HOSTS=uypolls.online,mapi.uypolls.online,localhost,127.0.0.1
+TRUSTED_PROXY_COUNT=1
+```
 
-Conservar `Referrer-Policy: same-origin` tanto en Nginx como en el HTML: Flask-WTF necesita la referencia del propio sitio para verificar POST por HTTPS. Esta política no envía la referencia a otros orígenes. Los encabezados Host conservan el puerto cuando existe; no desactivar el control SSL estricto de CSRF para resolver una configuración incorrecta.
+MariaDB y Redis deben compartir red privada con el backend y mantener sus volúmenes. No publicar sus puertos. El frontend puede desplegarse por separado y se conecta por la URL HTTPS pública; no necesita acceder a esa red.
 
-El frontend usa rutas relativas `/api`, sin `VITE_API_URL`. El backend conserva Flask-CORS con credenciales como en Buzón Ciudadano, limitado a **`https://uypolls.online`**; se validan también cookies y CSRF. `FRONTEND_URL` y `CORS_ORIGINS` contienen ese mismo origen exacto, sin `/participar`, barra final ni comodines. El subdominio `mapi` es el dominio del recurso backend, mientras que `BACKEND_UPSTREAM` sigue siendo su URL HTTP privada en Docker. No apuntar esa variable a la IP pública ni al dominio HTTPS de `mapi`: su función es el enlace interno entre contenedores.
+Los dos dominios deben contar con certificado HTTPS y redirección desde HTTP. El proxy de Coolify entrega la IP y el protocolo de la solicitud al backend. `TRUSTED_PROXY_COUNT=1` corresponde a ese único proxy; el puerto de Gunicorn debe recibir tráfico público únicamente mediante Coolify.
 
-En Coolify, ambos dominios pasan por el proxy HTTPS y sus respectivos puertos internos. No publicar directamente los puertos de MariaDB, Redis o Gunicorn en el host. La captura de DNS aportada muestra `A @ -> 152.53.90.109`, `A mapi -> 152.53.90.109` y `CNAME www -> uypolls.online`; no se ha confirmado su propagación desde el servidor. Usar `uypolls.online` como origen canónico de la encuesta. El registro `www` por sí solo no configura una redirección HTTPS ni agrega ese origen a CORS.
+## CORS, cookies y CSRF
 
-Las URLs previstas son `https://uypolls.online/participar` para el enlace base de Meta, `https://mapi.uypolls.online/admin/login` para administradores y `https://uypolls.online/api/csrf` para comprobar la conexión completa. `https://mapi.uypolls.online/health/ready` verifica el backend directamente. Las invitaciones usan `https://uypolls.online/s/<token>`. Los certificados y la publicación efectiva de ambos dominios siguen pendientes de configurar en Coolify.
+El origen autorizado es exactamente **https://uypolls.online**, sin rutas, barra final ni comodines. Axios envía las cookies con `withCredentials: true` y CORS admite credenciales únicamente para los orígenes configurados.
 
-Las cookies conservan su alcance al host que las emitió, con `Secure`, `HttpOnly` y `SameSite=Lax`. No se configura `SESSION_COOKIE_DOMAIN=.uypolls.online` ni se comparten cookies entre subdominios. Los POST administrativos de `mapi` permanecen en ese mismo origen y la encuesta mantiene sus POST en `uypolls.online` mediante el proxy. Se conserva el control SSL estricto de CSRF.
+Las cookies se emiten para el host del backend, con `Secure`, `HttpOnly` y `SameSite=Lax`. Los subdominios HTTPS de `uypolls.online` pertenecen al mismo sitio; no se requiere `SESSION_COOKIE_DOMAIN` ni cookies con `SameSite=None`. El frontend usa `Referrer-Policy: strict-origin` para enviar solo su origen, nunca la ruta de una invitación.
 
-En el frontend configurar además `TRUSTED_PROXY_CIDR` con la IP (`/32`) o subred privada exacta del proxy de Coolify. Nginx usa únicamente esa fuente confiable para obtener la IP y el protocolo originales, y reenvía un solo valor normalizado al backend. El valor inicial `127.0.0.1/32` sirve para acceso local directo y **debe adaptarse al proxy real en Coolify**. Si queda mal, el bloqueo por IP puede interpretar a todos los visitantes como una sola conexión. No configurar `0.0.0.0/0`; solo permitir la red dedicada del proxy y aislar el tráfico al backend.
+Cada POST de la API exige un token CSRF ligado a la sesión y valida el origen y la referencia HTTPS contra los orígenes autorizados. Los formularios administrativos mantienen la comprobación del propio origen del backend. No desactivar CSRF para corregir CORS.
 
-## Backend: variables de runtime
+La campaña abre **https://uypolls.online/participar**, el panel **https://mapi.uypolls.online/admin/login** y la simulación **https://uypolls.online/simular**. La comprobación de API es **https://mapi.uypolls.online/api/csrf**.
+
+## Archivos de configuración
+
+`frontend/.env.example` y el archivo privado `frontend/.env.coolify` contienen únicamente `VITE_API_URL`. `node scripts/prepare-coolify-env.mjs` crea los archivos privados que falten y conserva las claves existentes. Los campos de bases y correo se completan en el backend.
+
+`./scripts/export-repositories.ps1` genera dos ZIP independientes en `artifacts/`, excluyendo secretos y dependencias. También se pueden publicar directamente los contenidos de `frontend/` y `backend/` en sus repositorios.
+
+## Variables del backend
 
 Usar `backend/.env.example` como inventario. No subir un `.env` real.
 
@@ -50,24 +61,23 @@ Usar `backend/.env.example` como inventario. No subir un `.env` real.
 | `FRONTEND_URL` | URL HTTPS pública sin barra final |
 | `CORS_ORIGINS` | Origen público exacto, sin comodines |
 | `TRUSTED_HOSTS` | `uypolls.online,mapi.uypolls.online,localhost,127.0.0.1`, **sin `https://`, rutas ni puerto** |
-| `TRUSTED_PROXY_COUNT` | `1` con el Nginx suministrado que normaliza los encabezados de cliente; revisar si se modifica la topología |
+| `TRUSTED_PROXY_COUNT` | `1` con el proxy HTTPS de Coolify delante del backend |
 | `MAIL_*` | SMTP real, remitente autorizado y TLS o SSL; no activar supresión de correo |
 | `SURVEY_ID` | `lavalleja-2026`; no cambiar durante el trabajo de campo |
 | `SURVEY_ENFORCE_IP_UNIQUENESS` | `false`, política elegida: IP como señal y límite de frecuencia |
 | `SURVEY_LINK_IP_LIMIT`, `SURVEY_CHALLENGE_IP_LIMIT` | Límites Redis por IP para enlaces y verificadores locales; revisar tráfico de redes compartidas |
 | `SURVEY_MIN_FILL_SECONDS` | Tiempo mínimo de participación validado en servidor; 15 segundos por defecto en producción |
 | `TURNSTILE_REQUIRED` | `false` por defecto; capa opcional adicional |
+| `TURNSTILE_SITE_KEY` | Clave pública del widget opcional, entregada por la API al frontend |
 | `TURNSTILE_SECRET_KEY` | Clave privada solo si se activa el widget opcional |
 | `TURNSTILE_HOSTNAME` | Host público, sin `https://` ni rutas |
 | `RUN_MIGRATIONS` | `true` solo para la instancia única del despliegue inicial o un job de migración; luego `false` al escalar |
 
 Los secretos del backend son variables de runtime. No se pasan como argumentos de build del frontend. Mantener copias protegidas de las claves junto con el procedimiento de restauración.
 
-## Frontend: build y runtime
+## Verificación de participación
 
-El verificador local funciona sin claves ni proveedores. Si se activa la capa opcional Turnstile, en build `VITE_TURNSTILE_SITE_KEY` debe ser la clave pública del mismo widget que valida el backend. Cambiarla requiere reconstruir el frontend. El widget debe permitir el dominio definitivo y emitir la acción `survey_start`.
-
-En runtime, `BACKEND_UPSTREAM` apunta al backend en la red privada. La política CSP permite los recursos de Turnstile y el propio sitio. No necesita un dominio externo de API en el navegador.
+El verificador numérico propio permanece activo sin proveedores externos. Turnstile es opcional y está desactivado por defecto. Para activarlo, configurar `TURNSTILE_REQUIRED`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` y `TURNSTILE_HOSTNAME` únicamente en el backend. `GET /api/csrf` entrega su clave pública; la clave secreta nunca se publica ni se incorpora al frontend.
 
 ## Migración inicial y administradores
 
@@ -88,7 +98,7 @@ La plantilla y los archivos privados preparados usan `RUN_MIGRATIONS=true` para 
 ## Health checks y verificación final
 
 - Backend: `GET /health/live` verifica proceso; `GET /health/ready` verifica base, esquema y Redis. Coolify debe usar readiness para decidir disponibilidad. El host de su llamada debe estar permitido.
-- Frontend: `GET /health` responde por Nginx; verificar además `GET /api/csrf` a través del dominio público para probar la conexión al backend.
+- Frontend: `GET https://uypolls.online/health` responde por Nginx. La API se comprueba en `https://mapi.uypolls.online/api/csrf` y completando la encuesta en el navegador.
 - Entrar en `https://mapi.uypolls.online/admin/login`, resolver la suma y comprobar que la contraseña sola no abre el panel. Confirmar recepción y vencimiento del código por correo.
 - Completar una encuesta de prueba en el entorno previo al lanzamiento, resolver el verificador local y confirmar guardado, aparición en dashboard y CSV sin identificadores. El celular es un dato declarado, sin comprobación de titularidad.
 - Copiar la invitación a otro navegador y comprobar rechazo; volver a usar el enlace después del envío y comprobar el mensaje. Probar reintento tras desconectar la red y el bloqueo por celular, dispositivo e IP según política.
@@ -97,11 +107,11 @@ La plantilla y los archivos privados preparados usan `RUN_MIGRATIONS=true` para 
 
 Las pruebas con SMTP administrativo y navegadores internos de Meta requieren la configuración del operador. La participación no depende de un proveedor de mensajería.
 
-Ambos Dockerfiles ya incluyen un `HEALTHCHECK` ejecutable: Python en backend y `wget` en frontend. En aplicaciones Dockerfile, Coolify da prioridad al healthcheck de la imagen sobre el definido en el panel. No hace falta instalar `curl` en el backend ni reemplazar su check. `/health/ready` pertenece al backend; en el dominio del frontend esa ruta no es un check de base de datos. La comprobación pública entre las dos aplicaciones es `/api/csrf`.
+Ambos Dockerfiles ya incluyen un `HEALTHCHECK` ejecutable: Python en backend y `wget` en frontend. En aplicaciones Dockerfile, Coolify da prioridad al healthcheck de la imagen sobre el definido en el panel. No hace falta instalar `curl` en el backend ni reemplazar su check. `/health/ready` pertenece al backend; en el dominio del frontend esa ruta no es un check de base de datos. La conexión entre ambas aplicaciones se comprueba desde el navegador mediante `https://mapi.uypolls.online/api/csrf`.
 
 ## Prueba local del modo producción
 
-Se verificó el modo `production` de las imágenes con HTTPS, cookies `Secure`/`HttpOnly`/`SameSite=Lax`, CSRF SSL estricto, preflight CORS autorizado y rechazado, tiempo mínimo de 15 segundos, envío y reintento idempotente, ingreso administrativo con correo STARTTLS y certificado verificado, 38 gráficas y CSV. También se cambió realmente la IP del backend y se comprobó que el frontend conservaba su contenedor y recuperaba `/api/csrf` mediante DNS, sin reiniciarlo.
+Se verificó el modo `production` de las imágenes con HTTPS, cookies `Secure`/`HttpOnly`/`SameSite=Lax`, CSRF SSL estricto, preflight CORS autorizado y rechazado, tiempo mínimo de 15 segundos, envío y reintento idempotente, ingreso administrativo con correo STARTTLS y certificado verificado, 38 gráficas y CSV. Las aplicaciones se conectan mediante la URL pública del backend; un redespliegue del backend no requiere reiniciar el frontend.
 
 Para reproducir desde la carpeta de trabajo completa, con `.env.local`, `.env.e2e` y los servicios locales preparados:
 

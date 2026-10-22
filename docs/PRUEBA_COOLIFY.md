@@ -1,40 +1,36 @@
 # Verificación de despliegue — 22/10/2026
 
-## Resultado y alcance
+## Configuración vigente
 
-Se construyeron las dos imágenes Docker y se arrancó el backend con `FLASK_CONFIG=production`, conector nativo MariaDB, Redis y SMTP STARTTLS. El acceso de navegador se realizó por `https://localhost:8443`, mediante proxy TLS, Nginx de frontend y Gunicorn de backend. Ambos contenedores ejecutan sus procesos sin root.
+El frontend utiliza únicamente:
 
-Se verificó:
+```dotenv
+VITE_API_URL=https://mapi.uypolls.online
+```
 
-- Frontend y API bajo un mismo origen HTTPS, sin URL pública separada de API ni errores de CORS o contenido mixto en Chromium.
-- Preflight autorizado para el origen configurado y sin permisos para otro dominio o para el mismo host con esquema HTTP.
-- Rechazo de POST sin CSRF y de POST HTTPS sin Referer, conservando la protección SSL estricta de Flask-WTF.
-- Cookies administrativas y de participación con `Secure`, `HttpOnly` y `SameSite=Lax`.
-- Rechazo de envío antes de los 15 segundos mínimos de producción, seguido de guardado correcto y reintento idempotente sin duplicación.
-- Acceso administrativo con contraseña, verificador y código de correo, usando SMTP STARTTLS con certificado y hostname verificados. El servidor de correo era Mailpit local con STARTTLS obligatorio; no se envió correo externo.
-- Una respuesta real visible en las 38 gráficas y en el CSV autenticado, sin teléfono, UUID del dispositivo ni token en la exportación.
-- Sustitución del contenedor del backend por otro con una IP diferente: el frontend mantuvo el mismo contenedor y volvió a resolver el backend por DNS, recuperando `/api/csrf` sin reinicio.
-- Arranque del frontend bloqueado ante `localhost` como backend, marcador `PENDIENTE` o CIDR universal `/0`. Una configuración privada válida fue aceptada.
-- Validación de producción que rechaza CORS vacío, comodines, rutas, credenciales, fragmentos, puertos inválidos, origen público ausente de CORS y dominio público ausente de `TRUSTED_HOSTS`.
+Esta variable se incorpora durante el build. El frontend se publica en `https://uypolls.online` y Axios conecta directamente con la API, con credenciales. Nginx sirve archivos estáticos y deriva su política CSP de la misma variable. No se configura conexión privada del frontend al backend.
 
-Después de los cambios pasaron **1.637 pruebas de backend**, incluidas las integraciones con MariaDB/Redis reales, **104 pruebas de frontend**, TypeScript estricto, ESLint, la comprobación del cuestionario original y los builds. También pasó el nuevo escenario de navegador en modo producción y la prueba de cambio de IP. Las advertencias de dependencias de pruebas y anotaciones de Zod se conservan documentadas; no se describen como errores de ejecución.
+El backend permite el origen exacto `https://uypolls.online` mediante CORS. Cada POST exige un token CSRF válido ligado a su cookie de sesión y, por HTTPS, una referencia autorizada. Los formularios administrativos conservan el requisito de referencia del propio backend. Las cookies se mantienen en el host del backend, sin ampliar su atributo Domain.
 
-Tras definir el subdominio del backend se ejecutaron **24 pruebas de configuración/despliegue**, incluidas tres nuevas para la topología de dos dominios. Se verificaron POST HTTPS con CSRF estricto en ambos hosts, rechazo del Referer del otro host, acceso al formulario administrativo, cookies seguras separadas sin atributo `Domain` y preflight en el backend autorizado únicamente para el origen del frontend. Estas comprobaciones usan el cliente Flask local; no constituyen un despliegue ni una prueba de certificados públicos en Coolify. Las 21 pruebas de despliegue anteriores ya formaban parte de las 1.637 de la última batería completa.
+La configuración opcional de Turnstile reside en el backend. Su clave pública se entrega mediante `/api/csrf`; la clave secreta nunca se incluye en el frontend.
 
-Los registros y el administrador creados por el escenario de producción se eliminaron dentro del relevamiento local reservado. Los escenarios previos de 52 respuestas, todas las gráficas y ocho descargas CSV, junto con la exportación nativa de 261 casos, están documentados en `PRUEBA_ANALITICA.md`.
+## Pruebas ejecutadas con esta conexión
 
-## Configuración entregada
+- **108 pruebas de frontend**, ESLint y compilación TypeScript/Vite.
+- **1.683 pruebas de backend aprobadas** y 7 integraciones omitidas por no configurar su fixture externo. Las pruebas siguientes sí usan MariaDB y Redis reales en Docker.
+- **35 recorridos de navegador por HTTP**, incluidos los caminos condicionales de la encuesta, bloqueo de enlaces copiados, errores de red, simulación, CSV y administración.
+- **4 recorridos por HTTPS entre orígenes distintos**, con frontend en `https://localhost:8443` y API en `https://localhost:8444`. Se verificaron encuesta, simulación y descarga del CSV sin escribir respuestas simuladas en MariaDB.
+- **52 respuestas reales del entorno de pruebas**, 38 gráficas verificadas, filtros, paginación y ocho descargas CSV, con frontend y backend separados por origen HTTPS.
+- **Escenario en modo production aprobado**: MariaDB con conector nativo, Redis, SMTP STARTTLS con certificado verificado, cookies Secure/HttpOnly/SameSite=Lax, CORS autorizado y denegado, rechazo sin CSRF o referencia HTTPS, mínimo de 15 segundos, guardado, reintento idempotente, acceso administrativo con código de correo, gráficas y CSV.
+- **Imagen independiente del frontend construida con la URL final**: `VITE_API_URL=https://mapi.uypolls.online`. Su Nginx pasó la validación de configuración sin acceso a ninguna red ni backend.
+- Cuestionario original preservado: 116 opciones/áreas, 14 preguntas literales y cuatro límites.
 
-`backend/.env.coolify` contiene dos claves aleatorias independientes ya generadas. `frontend/.env.coolify` contiene las variables de runtime del proxy y la clave pública opcional del widget. Ambos archivos son privados: se excluyen de Git, de las exportaciones y de las imágenes Docker.
+Las pruebas de CSRF incluyen solicitudes a `mapi.uypolls.online` desde `uypolls.online`, cookies ligadas a la sesión, dominios ajenos, origen null, esquema/puerto incorrectos y administración con referencia ajena.
 
-Los dominios definidos por el responsable son `https://uypolls.online` para el frontend y `https://mapi.uypolls.online` para el backend. CORS conserva únicamente el origen del frontend y `TRUSTED_HOSTS` incluye ambos. La encuesta mantiene la conexión por proxy privado y la administración se abre en `mapi`. Las URLs internas de MariaDB/Redis, alias privado del backend y CIDR del proxy quedan pendientes; los campos del proveedor SMTP quedan vacíos. Los archivos no contienen credenciales ni hosts internos inventados. Es necesario completar esos datos en Coolify antes de publicar. El acceso administrativo sigue requiriendo SMTP; dejarlo vacío impide arrancar el backend en producción.
+## Alcance
 
-No se desplegó en una instancia real de Coolify ni se configuraron los certificados públicos. La captura aportada por el responsable muestra los registros `A @` y `A mapi` hacia `152.53.90.109`; no se verificó su propagación. La red del servidor definitivo, los certificados públicos y la entrega del proveedor SMTP deben comprobarse allí con los datos del operador. La guía `COOLIFY.md` detalla los puertos 8080/5000, la red compartida, el alias estable, los ámbitos build/runtime, migraciones y health checks.
+Estas comprobaciones se ejecutaron localmente. No constituyen un despliegue en el servidor de Coolify ni una validación de sus certificados públicos o de la entrega de su proveedor SMTP. Los certificados HTTPS y SMTP de las pruebas son temporales y quedan en `artifacts/`, fuera de Git.
 
-## Reproducción y evidencia
+Los archivos privados `.env.coolify` están excluidos de Git, imágenes y ZIP. El frontend contiene una sola variable. Los campos SMTP y las conexiones reales de MariaDB/Redis permanecen pendientes en el backend según lo indicado por el responsable.
 
-Seguir la sección «Prueba local del modo producción» de `COOLIFY.md`. Código en `tests/e2e/production/`, `compose.production-test.yaml` y los scripts `prepare-production-test.mjs`/`verify-backend-redeploy.mjs` de la carpeta de trabajo completa. Certificados y reportes se guardan en `artifacts/`, fuera de Git y de los ZIP:
-
-- `coolify-production-verification.json`: comprobaciones del escenario HTTPS y SMTP.
-- `coolify-redeploy-verification.json`: IP nueva de backend, frontend preservado y recuperación del endpoint.
-- `coolify-production.png`: captura del panel con el registro del escenario.
+La guía `COOLIFY.md` contiene la configuración actual. `tests/e2e/production/` y `compose.production-test.yaml` reproducen la prueba local de producción. Los fixtures de producción limpian sus propios registros al finalizar; la simulación se deshabilita al terminar sus pruebas.

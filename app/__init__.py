@@ -23,7 +23,8 @@ def create_app(config_name=None, overrides=None):
     if hops:
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=hops, x_proto=hops, x_host=0, x_port=0, x_prefix=0)
     app.extensions['redis'] = app.config.get('REDIS_CLIENT') or Redis.from_url(app.config['REDIS_URL'], socket_connect_timeout=2, socket_timeout=2)
-    CORS(app, resources={r'/api/*': {'origins': app.config['CORS_ALLOWED_ORIGINS']}}, supports_credentials=True)
+    CORS(app, resources={r'/api/*': {'origins': app.config['CORS_ALLOWED_ORIGINS']}}, supports_credentials=True,
+         expose_headers=['Content-Disposition'])
     db.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)
@@ -55,7 +56,8 @@ def create_app(config_name=None, overrides=None):
 
     @app.get('/api/csrf')
     def csrf_token():
-        return jsonify(csrf_token=generate_csrf())
+        return jsonify(csrf_token=generate_csrf(),
+                       turnstileSiteKey=app.config['TURNSTILE_SITE_KEY'] if app.config['TURNSTILE_REQUIRED'] else '')
 
     @app.template_global()
     def pagination_url(page):
