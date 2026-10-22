@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{% block title %}Gestión de encuestas · Lavalleja{% endblock %}</title><link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}"></head>
+<body>
+<a class="skip" href="#main">Ir al contenido</a>
+<header class="topbar"><a class="brand" href="{{ url_for('admin.dashboard') }}"><span class="brand-icon">LD</span><span>Encuestas <small>Laboratorio Demoscópico</small></span></a>{% if current_user.is_authenticated %}<span class="account">{{ current_user.username }} · {{ 'Super admin' if current_user.is_superuser else 'Admin' }}</span><form method="post" action="{{ url_for('admin.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="secondary" type="submit">Cerrar sesión</button></form>{% endif %}</header>
+<div class="shell">
+{% if current_user.is_authenticated %}
+<nav class="sidebar" aria-label="Administración">
+  <span class="nav-label">ANÁLISIS</span>
+  <a href="{{ url_for('admin.dashboard') }}" {% if request.endpoint == 'admin.dashboard' %}aria-current="page"{% endif %}>Resumen analítico</a>
+  <a href="{{ url_for('admin.responses_list') }}" {% if request.endpoint in ('admin.responses_list', 'admin.response_detail') %}aria-current="page"{% endif %}>Respuestas recibidas</a>
+  <span class="nav-label">PRUEBAS</span>
+  <a href="{{ url_for('admin.simulation') }}" {% if request.endpoint == 'admin.simulation' %}aria-current="page"{% endif %}>Simular</a>
+  {% if current_user.is_superuser %}
+  <span class="nav-label">ADMINISTRACIÓN</span>
+  <a href="{{ url_for('admin.users_list') }}">Administradores</a>
+  <a href="{{ url_for('admin.view_logs') }}">Registro de actividad</a>
+  {% endif %}
+  <p class="sidebar-note">Lavalleja · 2026<br>Datos confidenciales. Acceso registrado.</p>
+</nav>
+{% endif %}
+<main id="main" class="content {% if not current_user.is_authenticated %}auth-content{% endif %}">{% for category,message in get_flashed_messages(with_categories=true) %}<div class="alert {{ category }}" role="status">{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</main>
+</div>
+</body></html>

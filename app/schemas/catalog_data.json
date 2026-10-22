@@ -1,0 +1,158 @@
+{
+  "LOCALITIES": {
+    "minas": "Minas",
+    "solis_de_mataojo": "Solís de Mataojo",
+    "jose_pedro_varela": "José Pedro Varela",
+    "mariscala": "Mariscala",
+    "zapican": "Zapicán",
+    "jose_batlle_y_ordonez": "José Batlle y Ordóñez",
+    "piraraja": "Pirarajá",
+    "otra_urbana": "Otra zona urbana",
+    "otra_rural": "Otra zona rural",
+    "ns_nc": "Ns/Nc"
+  },
+  "GENDER_OPTIONS": {
+    "masculino": "Masculino",
+    "femenino": "Femenino",
+    "otro": "Otro",
+    "ns_nc": "Ns/Nc"
+  },
+  "AGE_RANGE_OPTIONS": {
+    "18_22": "De 18 a 22 años",
+    "23_34": "De 23 a 34 años",
+    "35_44": "De 35 a 44 años",
+    "45_54": "De 45 a 54 años",
+    "55_64": "De 55 a 64 años",
+    "65_mas": "65 años o más"
+  },
+  "VOTED_2025_OPTIONS": {
+    "si": "Sí",
+    "no": "No",
+    "no_recuerdo": "No recuerdo",
+    "pnr": "Prefiero no responder / Ns/Nc"
+  },
+  "PARTY_2025_OPTIONS": {
+    "frente_amplio": "Frente Amplio",
+    "partido_nacional": "Partido Nacional",
+    "partido_colorado": "Partido Colorado",
+    "cabildo_abierto": "Cabildo Abierto",
+    "unidad_popular": "Unidad Popular",
+    "otro": "Otros",
+    "no_recuerdo": "No recuerdo",
+    "pnr": "Prefiero no responder / Ns/Nc"
+  },
+  "GENERAL_EVALUATION_OPTIONS": {
+    "muy_buena": "Muy buena",
+    "buena": "Buena",
+    "ni_buena_ni_mala": "Ni buena ni mala",
+    "mala": "Mala",
+    "muy_mala": "Muy mala",
+    "ns_nc": "Ns/Nc"
+  },
+  "CONFORMITY_OPTIONS": {
+    "muy_conforme": "Muy conforme",
+    "conforme": "Conforme",
+    "ni_conforme_ni_disconforme": "Ni conforme ni disconforme",
+    "disconforme": "Disconforme",
+    "muy_disconforme": "Muy disconforme",
+    "ns_nc": "Ns/Nc"
+  },
+  "EVOLUTION_OPTIONS": {
+    "mucho_mejor": "Mucho mejor",
+    "algo_mejor": "Algo mejor",
+    "aprox_igual": "Aproximadamente igual",
+    "algo_peor": "Algo peor",
+    "mucho_peor": "Mucho peor",
+    "ns_nc": "Ns/Nc"
+  },
+  "CONCERN_OPTIONS": {
+    "falta_empleo": "Falta de empleo",
+    "salarios_ingresos": "Salarios e ingresos de los hogares",
+    "costo_vida": "Costo de vida",
+    "oportunidades_jovenes": "Falta de oportunidades para jóvenes",
+    "emigracion_jovenes": "Emigración de jóvenes hacia otros departamentos",
+    "desarrollo_economico": "Desarrollo económico del departamento",
+    "estado_calles": "Estado de calles y caminos",
+    "veredas": "Veredas y accesibilidad urbana",
+    "limpieza_residuos": "Limpieza y gestión de residuos",
+    "alumbrado_publico": "Alumbrado público",
+    "seguridad": "Seguridad",
+    "acceso_salud": "Acceso a servicios de salud",
+    "vivienda": "Vivienda",
+    "transporte": "Transporte y movilidad",
+    "servicios_rurales": "Servicios en zonas rurales",
+    "medio_ambiente": "Medio ambiente",
+    "cursos_de_agua": "Cuidado de cursos de agua",
+    "atencion_organismos": "Atención y respuesta de organismos públicos",
+    "burocracia": "Exceso de trámites o burocracia",
+    "bienestar_animal": "Bienestar animal",
+    "educacion": "Educación y oportunidades de capacitación",
+    "otro": "Otro",
+    "ninguno": "Ninguno en particular",
+    "ns_nc": "Ns/Nc"
+  },
+  "PRIORITY_OPTIONS": {
+    "empleo": "Empleo y desarrollo económico",
+    "obras": "Obras e infraestructura",
+    "camineria": "Caminería rural",
+    "limpieza": "Limpieza y residuos",
+    "espacios": "Espacios públicos",
+    "sociales": "Políticas sociales",
+    "juventud": "Juventud",
+    "deporte": "Deporte",
+    "cultura": "Cultura",
+    "turismo": "Turismo",
+    "medio_ambiente": "Medio ambiente",
+    "bienestar_animal": "Bienestar animal",
+    "atencion": "Atención ciudadana",
+    "digitalizacion": "Digitalización de trámites",
+    "descentralizacion": "Descentralización",
+    "desarrollo_rural": "Desarrollo rural",
+    "movilidad": "Movilidad y tránsito",
+    "alumbrado": "Alumbrado público",
+    "ordenamiento": "Ordenamiento territorial",
+    "otro": "Otro",
+    "ns_nc": "Ns/Nc"
+  },
+  "AREAS_A": {
+    "social": "Área Social, Inclusión y Género",
+    "descentralizacion": "Descentralización y Municipios",
+    "obras": "Obras, Caminería y Mantenimiento Urbano",
+    "salud_medio_ambiente": "Salud Pública y Medio Ambiente",
+    "juventud_deporte": "Juventud, Deporte y Políticas de Recreación",
+    "atencion_ciudadana": "Atención Ciudadana en la Intendencia",
+    "limpieza": "Limpieza Urbana y Mantenimiento de Espacios Públicos",
+    "alumbrado": "Alumbrado Público"
+  },
+  "AREAS_B": {
+    "transito": "Tránsito, Movilidad y Seguridad Vial",
+    "cultura": "Cultura y acceso a actividades culturales",
+    "turismo": "Turismo y promoción del departamento",
+    "desarrollo_rural": "Desarrollo Rural y atención a zonas rurales",
+    "desarrollo_economico": "Apoyo al desarrollo económico, comercio y emprendimientos",
+    "ordenamiento_territorial": "Ordenamiento Territorial y desarrollo urbano",
+    "servicios_digitales": "Servicios digitales y trámites en línea",
+    "modernizacion_gestion_servicios_digitales": "Modernización de la Gestión y Servicios Digitales",
+    "transparencia": "Transparencia, comunicación y acceso a la información",
+    "bienestar_animal": "Bienestar Animal"
+  },
+  "MUNICIPALITIES": {
+    "jose_pedro_varela": "José Pedro Varela",
+    "solis_de_mataojo": "Solís de Mataojo",
+    "jose_batlle_y_ordonez": "José Batlle y Ordóñez",
+    "mariscala": "Mariscala",
+    "piraraja": "Pirarajá",
+    "zapican": "Zapicán"
+  },
+  "MUNICIPALITY_MEMBERSHIP_OPTIONS": {
+    "jose_pedro_varela": "José Pedro Varela",
+    "solis_de_mataojo": "Solís de Mataojo",
+    "jose_batlle_y_ordonez": "José Batlle y Ordóñez",
+    "mariscala": "Mariscala",
+    "piraraja": "Pirarajá",
+    "zapican": "Zapicán",
+    "no_pertenece": "No pertenece a ninguno",
+    "no_seguro": "No estoy seguro/a",
+    "ns_nc": "Ns/Nc"
+  }
+}

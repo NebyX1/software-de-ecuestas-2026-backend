@@ -1,0 +1,92 @@
+SOFTWARE DE ENCUESTAS — BACKEND
+
+Estructura y comandos basados en buzon-ciudadano-backend (Flask).
+Python 3.11 o 3.12, MariaDB y Redis. No se crea esquema con create_all en producción.
+
+1. Entorno local (desde la carpeta backend):
+    python -m venv .venv
+    .venv\Scripts\Activate.ps1
+    python -m pip install -r requirements.txt
+
+   Para pruebas locales en Windows sin el conector nativo MariaDB:
+    python -m pip install -r requirements-dev.txt
+   Los tests unitarios usan SQLite/fakeredis; los de integración requieren MariaDB/Redis reales.
+
+2. Configuración:
+    Copiar .env.example a .env y completar TODOS los secretos y servicios.
+    Generar dos secretos independientes:
+    python -c "import secrets; print(secrets.token_urlsafe(48))"
+    Uno para SECRET_KEY y otro distinto para IDENTITY_HMAC_KEY.
+    Mantener IDENTITY_HMAC_KEY estable durante toda la encuesta; rotarlo invalida los bloqueos.
+
+3. Migraciones (comando de release antes de iniciar/escalar la aplicación):
+    python -m flask --app wsgi:app db upgrade -d migrations
+    python -m flask --app wsgi:app db current -d migrations
+    python -m flask --app wsgi:app seed-data
+
+4. Crear administradores: se conserva la interfaz del proyecto de referencia:
+    python -m flask create-admin nombre-de-admin mail-de-admin contraseña-de-admin false
+    python -m flask create-admin nombre-super-admin mail-super-admin contraseña-super-admin true
+
+   La contraseña debe tener entre 12 y 128 caracteres. Los comandos devuelven error
+   ante correo/nombre duplicados o rol distinto de true/false. No incluir contraseñas reales
+   en archivos ni historial compartido. Para crear un admin sin contraseña en el historial:
+    python -m flask create-admin nombre-de-admin mail-de-admin
+   Solicita la contraseña oculta y crea un admin normal. Un superadmin existente puede
+   cambiar el rol desde /admin/users. El comando tradicional de cuatro argumentos también funciona.
+   Para crear un superadmin con contraseña oculta:
+    python -m flask create-admin nombre-super-admin mail-super-admin --superuser
+
+5. Iniciar localmente:
+    python wsgi.py
+
+6. Despliegue Coolify:
+    Build pack: Dockerfile; puerto interno: 5000; HTTPS obligatorio en proxy frontal.
+    Variables: revisar .env.example y README.md. Base de datos: MariaDB, no SQLite.
+    Redis requerido; no existe fallback silencioso a memoria en producción.
+    Ejecutar migraciones como release; RUN_MIGRATIONS=true solo para primer despliegue
+    de una única instancia. En réplicas posteriores dejar false y migrar una sola vez.
+    Health check interno: /health/ready (comprueba DB, migraciones y Redis).
+    /health/live solo comprueba que el proceso responde.
+
+7. Acceso de administración:
+    /admin/login -> correo + contraseña + número verificador
+    /admin/2fa -> código de seis dígitos enviado por correo, máximo cinco intentos, diez minutos
+    /admin/dashboard -> analítica y filtros por variable
+    /admin/responses -> respuestas y CSV filtrado sin identidades
+    /admin/users -> gestión de administradores, solo superadmins
+    /admin/logs -> registro de actividad, solo superadmins
+    Cerrar sesión usa POST con CSRF para impedir cierres de sesión forzados mediante links.
+
+Pruebas privadas del formulario:
+    /admin/simulation -> apartado Simular: habilitar, reiniciar o deshabilitar.
+    /simular -> acceso desde el dominio del frontend, con correo y contraseña de admin.
+    No se escriben respuestas de prueba en MariaDB ni se agregan a la analítica.
+    Al finalizar se permite descargar un CSV de ejemplo con el mismo formato del real.
+    Las respuestas y el CSV solo viven en memoria y se descartan al recargar, salir o reiniciar.
+    Redis conserva solamente la habilitación, la generación y accesos/verificadores temporales.
+    Reiniciar, deshabilitar, cambiar la contraseña o desactivar al admin revoca el acceso.
+    El acceso de simulación no inicia una sesión en el panel ni reemplaza su correo 2FA.
+    No requiere migraciones ni nuevas variables de entorno.
+
+8. Mantenimiento diario (programar en Coolify, sin ejecutar en cada worker):
+    python -m flask --app wsgi:app cleanup-survey
+    Borra invitaciones vencidas. Los verificadores transitorios vencen automáticamente en Redis.
+    Los bloqueos HMAC de participación
+    se conservan durante el estudio para evitar volver a responder.
+
+9. Verificación:
+    python -m pytest -q
+    python -m pip_audit --no-deps --disable-pip -r requirements.lock --ignore-vuln PYSEC-2026-217
+   La excepción corresponde al Connector/C corregido y comprobado en la imagen;
+   leer SECURITY_AUDIT.md. No aplicar la excepción sin verificar la biblioteca nativa.
+
+La participación pública no envía SMS ni requiere proveedores externos. Se mantiene
+un número verificador local obligatorio, de un solo uso, guardado en Redis, con vencimiento
+de cinco minutos y hasta cinco intentos, junto con señuelo, tiempo mínimo y controles de duplicados.
+SURVEY_MIN_FILL_SECONDS vale 15 en producción y 0 en desarrollo/pruebas.
+El celular declarado se valida por formato y unicidad; no se verifica su posesión.
+TURNSTILE_REQUIRED=false es la configuración inicial. Si se activa Turnstile opcionalmente,
+completar sus claves y hostname y compilar el frontend con la clave pública correspondiente.
+La administración conserva correo 2FA obligatorio. SMTP de producción debe usar TLS/SSL.
+La migración 4d38b91e66a2 quita metadatos antiguos de SMS y conserva opiniones y bloqueos.

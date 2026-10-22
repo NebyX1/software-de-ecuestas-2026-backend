@@ -1,0 +1,20 @@
+{% extends 'admin/base.html' %}
+{% block title %}Simular · Encuestas{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">PRUEBA DEL FORMULARIO</p><h1>Simular</h1><p class="muted">Probá las preguntas, sus condiciones y la descarga del CSV.</p></div></div>
+<section class="panel edit-panel">
+  <h2>Simulación {{ 'habilitada' if enabled else 'deshabilitada' }}</h2>
+  <p>Las respuestas de prueba no se guardan en la base de datos ni aparecen en las respuestas recibidas o la analítica. Al finalizar cada prueba podés descargar un CSV con el mismo formato que la encuesta real.</p>
+  <p>El acceso requiere el correo y la contraseña de un administrador activo. Las respuestas se mantienen en memoria mientras la pestaña está abierta y se pierden al recargarla o salir.</p>
+  {% if enabled %}
+  <p><a class="button" href="{{ simulation_url }}" target="_blank" rel="noopener noreferrer">Abrir formulario de prueba</a></p>
+  <p class="small muted">Reiniciar invalida los accesos actuales y permite comenzar desde cero. Deshabilitar cierra el acceso al formulario de prueba.</p>
+  <div class="actions">
+    <form method="post" action="{{ url_for('admin.simulation_restart') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="secondary" type="submit">Reiniciar simulación</button></form>
+    <form method="post" action="{{ url_for('admin.simulation_disable') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="secondary danger" type="submit">Deshabilitar simulación</button></form>
+  </div>
+  {% else %}
+  <form method="post" action="{{ url_for('admin.simulation_enable') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Habilitar simulación</button></form>
+  {% endif %}
+</section>
+{% endblock %}
