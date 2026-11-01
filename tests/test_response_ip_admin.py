@@ -50,7 +50,7 @@ def test_admin_list_detail_and_csv_include_exact_ip_with_legacy_empty(platform_a
     assert not {'phone', 'deviceId', 'device_hash', 'browser_hash', 'ip_hash', 'token'} & records[identifiers[0]].keys()
 
 
-def test_simulation_csv_has_blank_ip_and_no_persisted_opinions(platform_app, answers):
+def test_simulation_csv_includes_observed_ip_without_persisting_opinions(platform_app, answers):
     client = platform_app.test_client()
     run = access(client, platform_app)
     data = payload(client, run, answers)
@@ -60,8 +60,7 @@ def test_simulation_csv_has_blank_ip_and_no_persisted_opinions(platform_app, ans
                            environ_overrides={'REMOTE_ADDR': '203.0.113.77'})
     assert exported.status_code == 200
     records = read_csv(exported)
-    assert len(records) == 1 and records[0]['ip_address'] == ''
-    assert '203.0.113.77' not in exported.get_data(as_text=True)
+    assert len(records) == 1 and records[0]['ip_address'] == '203.0.113.77'
     with platform_app.app_context():
         assert SurveyResponse.query.count() == count
 

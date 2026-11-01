@@ -14,4 +14,4 @@ Desplegar primero el backend. La API acepta el nuevo aviso `2026-03` y conserva 
 
 `TRUSTED_PROXY_COUNT=1` corresponde al único proxy HTTPS de Coolify delante del backend. Mantener Gunicorn accesible públicamente solo mediante ese proxy. NAT, VPN y redes compartidas pueden hacer que varias personas tengan una misma IP; la dirección registrada no es un identificador físico único del equipo.
 
-La simulación continúa sin guardar respuestas ni IP de respuesta. Su CSV conserva las mismas columnas con `ip_address` vacía.
+La simulación continúa sin guardar respuestas ni IP de respuesta en la base de datos. Al finalizar, el CSV de prueba incluye en `ip_address` la IP observada en esa conexión, mediante la misma normalización del servidor. Ese valor se utiliza para generar el archivo sin persistirlo como respuesta ni en el estado de simulación de Redis.

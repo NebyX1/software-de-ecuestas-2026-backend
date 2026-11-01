@@ -28,7 +28,7 @@ Estos metadatos **no prueban identidad y no se usan para bloquear duplicados**: 
 
 ## Migración y verificación
 
-La revisión `c41d8a92b730` agrega `ip_address` nullable para conservar registros previos sin inventar sus IP. Los nuevos envíos exigen una dirección válida. La IP corresponde a la conexión al enviar y se conserva ante reintentos. La deduplicación mantiene su política para redes compartidas. El CSV de simulación deja la columna vacía y no almacena IP de respuesta.
+La revisión `c41d8a92b730` agrega `ip_address` nullable para conservar registros previos sin inventar sus IP. Los nuevos envíos exigen una dirección válida. La IP corresponde a la conexión al enviar y se conserva ante reintentos. La deduplicación mantiene su política para redes compartidas. El CSV de simulación incluye la IP observada en la conexión al finalizar; la generación del archivo no guarda respuestas ni IP en la base de datos o en el estado de simulación de Redis.
 
 La revisión Alembic `9a7e3c2d1f60` agrega cinco columnas opcionales y cuatro índices. Los registros anteriores mantienen valores nulos y aparecen como «Sin registro (respuesta anterior)», con columnas técnicas vacías en CSV. No se atribuyen dispositivos retrospectivamente.
 

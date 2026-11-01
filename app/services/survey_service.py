@@ -15,6 +15,7 @@ from app.extensions import db
 from app.models.survey import SurveyInvitation, SurveyResponse
 from app.repositories.survey import add_claims, add_values, has_claims, invitation_by_hash
 from app.schemas.survey import normalize_phone
+from app.utils.client_ip import client_ip_address as _client_ip_address
 from .antibot_service import verify_turnstile
 from .challenge_service import consume_challenge
 from .survey_errors import SurveyError
@@ -50,21 +51,6 @@ def _browser_id(create=False):
         raise SurveyError('link_bound', 'Este enlace está vinculado al navegador que inició la encuesta.', 403)
     value = secrets.token_urlsafe(32)
     return value, _cookie_signer().dumps(value)
-
-
-def _client_ip_address():
-    """Canonical connection IP after the configured trusted proxy middleware."""
-    try:
-        address = ipaddress.ip_address(request.remote_addr or '')
-        if address.version == 6:
-            # Zone identifiers belong to local interfaces, not public client IPs.
-            if address.scope_id is not None:
-                raise ValueError('Scoped IPv6 addresses are not accepted')
-            if address.ipv4_mapped:
-                address = address.ipv4_mapped
-        return str(address)
-    except ValueError:
-        raise SurveyError('service_unavailable', 'No se pudo validar el origen de la conexión.', 503)
 
 
 def _ip_digest():

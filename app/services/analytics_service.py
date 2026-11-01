@@ -129,7 +129,7 @@ def csv_columns():
 
 def csv_record(response):
     keys = list(VARIABLE_DEFINITIONS) + ['concernOther', 'openComment']
-    # The transient simulation record deliberately has no IP address.
+    # Legacy responses may lack an IP; new real and transient trial records include it.
     row = [response.id, response.created_at.isoformat() + 'Z', getattr(response, 'ip_address', None), response.consent_version]
     for key in keys:
         value = value_at(response.answers, key)

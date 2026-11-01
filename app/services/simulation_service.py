@@ -17,6 +17,7 @@ from app.services.challenge_service import consume_challenge
 from app.services.device_metadata import capture_device_metadata
 from app.services.survey_errors import SurveyError
 from app.utils.security import digest
+from app.utils.client_ip import client_ip_address
 from app.utils.time import utcnow
 
 SIMULATION_COOKIE = 'survey_simulation'
@@ -102,10 +103,11 @@ def simulation_csv(data, invitation):
     normalize_phone(data['phone'])  # Exercise the same phone-format rule; discard it.
     if data.get('website'):
         raise SurveyError('submission_rejected', 'No pudimos validar el envío. Revisá el formulario e intentá nuevamente.', 400)
+    connection_ip = client_ip_address()
     consume_challenge(invitation, data['challengeId'], data['challengeAnswer'])
     response = SimpleNamespace(
         id='SIMULACION-' + str(uuid4()), created_at=utcnow(), answers=data['answers'],
-        consent_version=data['consentVersion'],
+        consent_version=data['consentVersion'], ip_address=connection_ip,
         device_metadata=capture_device_metadata(request.headers.get('User-Agent', ''), data.get('clientMetadata', {})),
     )
     output = io.StringIO(newline='')
