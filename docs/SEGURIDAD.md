@@ -32,7 +32,7 @@ La política elegida por el responsable es **IP como señal y límite de frecuen
 
 Los límites Redis por IP se pueden ajustar mediante `SURVEY_LINK_IP_LIMIT` y `SURVEY_CHALLENGE_IP_LIMIT`. El verificador tiene caducidad, intentos y consumo único ligado al navegador y la invitación. La unicidad estricta por IP queda disponible como opción explícita y tiene pruebas propias; no es la configuración elegida.
 
-`TRUSTED_PROXY_COUNT` debe corresponder a la cadena real hasta Flask. Con Nginx del frontend y sin que Coolify añada otra IP a la cadena de aplicación, se confía en el salto de Nginx. Revisar los encabezados en el despliegue real. El contenedor del backend no debe aceptar tráfico directo de Internet que permita falsificar encabezados de proxy. No asignar un número alto «para que funcione».
+`TRUSTED_PROXY_COUNT` debe corresponder a la cadena real hasta Flask. Con el backend detrás del único proxy HTTPS de Coolify se usa un salto confiable (valor 1). La captura lee request.remote_addr después de ProxyFix, nunca una dirección aportada en el JSON. Revisar los encabezados en el despliegue real. El contenedor del backend no debe aceptar tráfico directo de Internet que permita falsificar encabezados de proxy. No asignar un número alto «para que funcione».
 
 IPv6 con direcciones temporales, NAT de operadoras, VPN, proxys y redes móviles limitan la utilidad de la IP. El filtrado por país o reputación, si se agrega en el perímetro, es una señal adicional y no una prueba de identidad o residencia.
 
@@ -40,7 +40,7 @@ IPv6 con direcciones temporales, NAT de operadoras, VPN, proxys y redes móviles
 
 Cada respuesta incluye información técnica descriptiva: dispositivo, sistema operativo, navegador, aplicación de acceso y, cuando están disponibles, modelo, idioma, zona horaria y dimensiones de pantalla. Se informa en el formulario y se muestra únicamente en el panel autenticado y sus exportaciones. Puede ser aproximada o falsificada; no se usa como prueba de identidad ni como restricción adicional de unicidad. No se guarda el User-Agent completo ni se capturan identificadores de hardware. Ver [registro de dispositivos](DISPOSITIVOS.md).
 
-Teléfonos, tokens, identificadores e IP no se guardan en texto claro como parte de las opiniones. Se usan HMAC con una clave independiente de la clave de sesiones. No rotar `IDENTITY_HMAC_KEY` ni cambiar `SURVEY_ID` durante el relevamiento sin un plan de migración: invalidaría comparaciones con las huellas históricas.
+Teléfonos, tokens e identificadores del navegador se mantienen como HMAC separados de las opiniones. Cada respuesta nueva conserva además la IP exacta de envío en survey_responses.ip_address, disponible únicamente en el panel y CSV autenticados. La IP mantiene también su huella HMAC de control. La simulación no almacena IP de respuestas. Se usa una clave HMAC independiente de la clave de sesiones. No rotar `IDENTITY_HMAC_KEY` ni cambiar `SURVEY_ID` durante el relevamiento sin un plan de migración: invalidaría comparaciones con las huellas históricas.
 
 Las tablas de control no tienen relación directa con las respuestas. Esto reduce vinculación, pero no constituye anonimato matemático: horarios, contenido libre y acceso privilegiado a infraestructura pueden permitir correlaciones. Limitar acceso, registrar exportaciones y no capturar cuerpos de API en logs, trazas o herramientas de errores.
 

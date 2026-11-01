@@ -1,7 +1,7 @@
-"""Survey opinions and detached anti-duplication evidence.
+"""Survey opinions with connection IPs and detached anti-duplication evidence.
 
-Identifiers are HMACs, scoped to a survey. No identity table has a response
-foreign key; the invitation receipt is independent from the opinion row ID.
+Phone/device duplicate identifiers are survey-scoped HMACs. The response IP
+is recorded separately on its opinion row; invitation receipts stay independent.
 """
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -47,6 +47,8 @@ class SurveyResponse(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid4()))
     survey_id = db.Column(db.String(64), nullable=False, index=True)
     answers = db.Column(db.JSON, nullable=False)
+    # NULL is reserved for historical responses collected before IP recording.
+    ip_address = db.Column(db.String(45), nullable=True)
     device_metadata = db.Column(db.JSON, nullable=True)
     device_type = db.Column(db.String(16), nullable=True)
     os_family = db.Column(db.String(24), nullable=True)

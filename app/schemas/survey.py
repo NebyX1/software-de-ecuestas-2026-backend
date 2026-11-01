@@ -135,7 +135,7 @@ class SubmissionSchema(SessionSchema):
     website = fields.String(load_default='', validate=validate.Length(max=200))
     answers = fields.Nested(AnswersSchema, required=True)
     consent = fields.Boolean(required=True, truthy={True}, falsy={False}, validate=validate.Equal(True))
-    consentVersion = fields.String(required=True, validate=validate.OneOf(['2026-01', '2026-02']))
+    consentVersion = fields.String(required=True, validate=validate.OneOf(['2026-01', '2026-02', '2026-03']))
 
     @pre_load
     def literal_consent(self, data, **kwargs):

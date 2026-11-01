@@ -52,16 +52,26 @@ def _browser_id(create=False):
     return value, _cookie_signer().dumps(value)
 
 
-def _ip_digest():
+def _client_ip_address():
+    """Canonical connection IP after the configured trusted proxy middleware."""
     try:
         address = ipaddress.ip_address(request.remote_addr or '')
-        if address.version == 6 and address.ipv4_mapped:
-            address = address.ipv4_mapped
-        # Rotating IPv6 privacy addresses in one LAN retain the same /64 key.
-        bucket = str(ipaddress.ip_network(f'{address}/64', strict=False)) if address.version == 6 else str(address)
-        return digest('ip', bucket)
+        if address.version == 6:
+            # Zone identifiers belong to local interfaces, not public client IPs.
+            if address.scope_id is not None:
+                raise ValueError('Scoped IPv6 addresses are not accepted')
+            if address.ipv4_mapped:
+                address = address.ipv4_mapped
+        return str(address)
     except ValueError:
         raise SurveyError('service_unavailable', 'No se pudo validar el origen de la conexión.', 503)
+
+
+def _ip_digest():
+    address = ipaddress.ip_address(_client_ip_address())
+    # The duplicate signal keeps IPv6 /64 bucketing; the response stores the full IP.
+    bucket = str(ipaddress.ip_network(f'{address}/64', strict=False)) if address.version == 6 else str(address)
+    return digest('ip', bucket)
 
 
 def _claims(device_hash, browser_hash, phone_hash=None):
@@ -153,6 +163,9 @@ def submit_response(data):
             claims = _claims(invitation.device_hash, invitation.browser_hash, phone_hash)
             if has_claims(claims):
                 raise SurveyError('duplicate_response', 'Ya se registró una participación con estos datos.', 409)
+            # Capture the actual submitting connection, not the link-creation IP
+            # or a client-supplied JSON/header field. Validate before consuming proof.
+            client_ip = _client_ip_address()
             # Hold the invitation row lock before consuming Redis. Identical
             # concurrent retries observe the committed receipt above and never
             # consume a second challenge. A DB deadlock retry in THIS request
@@ -174,6 +187,7 @@ def submit_response(data):
             metadata = capture_device_metadata(request.headers.get('User-Agent', ''), data.get('clientMetadata', {}))
             opinion = SurveyResponse(
                 id=str(uuid4()), survey_id=current_app.config['SURVEY_ID'], answers=data['answers'],
+                ip_address=client_ip,
                 consent_version=data['consentVersion'], consented_at=now, created_at=now,
                 device_metadata=metadata, device_type=metadata['device_type'],
                 os_family=metadata['os_family'], browser_family=metadata['browser_family'],

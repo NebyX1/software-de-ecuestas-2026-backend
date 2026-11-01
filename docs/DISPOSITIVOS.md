@@ -1,9 +1,10 @@
 # Registro técnico de las respuestas
 
-Al guardar una respuesta se registra información descriptiva del navegador. El aviso de privacidad del formulario lo informa antes de comenzar y el frontend envía la nueva versión de aviso `2026-02`, guardada con la respuesta. La API conserva compatibilidad con `2026-01` para clientes anteriores y sus reintentos. No se necesita SMS ni otro proveedor para esta función.
+Al guardar una respuesta se registra su IP de envío y la información descriptiva del navegador. El aviso de privacidad lo informa antes de comenzar y el frontend envía la versión `2026-03`, guardada con la respuesta. La API conserva compatibilidad con `2026-01` y `2026-02` para clientes anteriores y sus reintentos. No se necesita SMS ni otro proveedor para esta función.
 
 | Dato | Captura |
 | --- | --- |
+| IP de envío | IPv4/IPv6 completa observada por el servidor después del proxy confiable |
 | Tipo de dispositivo | Celular, tablet, computadora u origen desconocido |
 | Marca y modelo | Cuando el navegador los informa o permite inferirlos |
 | Sistema operativo y versión | Encabezado User-Agent y Client Hints disponibles |
@@ -13,9 +14,9 @@ Al guardar una respuesta se registra información descriptiva del navegador. El 
 | Pantalla y ventana | Ancho y alto en píxeles CSS, densidad de píxeles y puntos táctiles |
 | Fuente | Método utilizado para la detección; formato de metadatos versión 1 |
 
-Estos datos quedan asociados a la respuesta en `survey_responses.device_metadata`. Cuatro columnas con índices por encuesta permiten filtrar tipo de dispositivo, sistema operativo, navegador y aplicación de acceso. No se añaden preguntas ni se modifica el cuestionario.
+La IP se guarda en `survey_responses.ip_address`; los datos descriptivos del navegador, en `survey_responses.device_metadata`. Cuatro columnas con índices por encuesta permiten filtrar tipo de dispositivo, sistema operativo, navegador y aplicación de acceso. No se añaden preguntas ni se modifica el cuestionario.
 
-El panel presenta los datos en cada detalle, muestra dispositivo y sistema operativo en el listado, agrega cuatro gráficos y permite combinar esos filtros con las variables de encuesta y fechas. El CSV protegido incluye columnas `technical_*`; conserva el escape de fórmulas. No exporta UUID local, cookie, teléfono, IP ni sus HMAC. Los datos técnicos también pueden contribuir a correlacionar personas: limitar el acceso al panel, a los CSV y a los respaldos.
+El panel presenta los datos en cada detalle, muestra IP, dispositivo y sistema operativo en el listado, agrega cuatro gráficos y permite combinar esos filtros con las variables de encuesta y fechas. El CSV protegido incluye `ip_address` y columnas `technical_*`; conserva el escape de fórmulas. No exporta UUID local, cookie, teléfono ni sus HMAC. Los datos técnicos también pueden contribuir a correlacionar personas: limitar el acceso al panel, a los CSV y a los respaldos.
 
 ## Límites de detección
 
@@ -26,6 +27,8 @@ La solicitud opcional de Client Hints espera como máximo 500 ms y no realiza ll
 Estos metadatos **no prueban identidad y no se usan para bloquear duplicados**: equipos distintos pueden compartirlos. Se mantienen los controles persistidos por invitación, cookie, identificador local y número declarado, con IP como señal y límite de frecuencia. Un reintento del mismo envío devuelve el comprobante y conserva los metadatos originales aunque cambie el tamaño de la ventana.
 
 ## Migración y verificación
+
+La revisión `c41d8a92b730` agrega `ip_address` nullable para conservar registros previos sin inventar sus IP. Los nuevos envíos exigen una dirección válida. La IP corresponde a la conexión al enviar y se conserva ante reintentos. La deduplicación mantiene su política para redes compartidas. El CSV de simulación deja la columna vacía y no almacena IP de respuesta.
 
 La revisión Alembic `9a7e3c2d1f60` agrega cinco columnas opcionales y cuatro índices. Los registros anteriores mantienen valores nulos y aparecen como «Sin registro (respuesta anterior)», con columnas técnicas vacías en CSV. No se atribuyen dispositivos retrospectivamente.
 

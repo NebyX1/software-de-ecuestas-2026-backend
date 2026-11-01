@@ -63,7 +63,8 @@ def verify_large_csv(app):
         reader = csv.DictReader(io.StringIO(result.data.decode('utf-8-sig'), newline=''))
         rows = list(reader)
         assert len(rows) == 261 and len({row['id'] for row in rows}) == 261
-        assert len(reader.fieldnames) == len(set(reader.fieldnames)) == 57
+        assert len(reader.fieldnames) == len(set(reader.fieldnames)) == 58
+        assert all(row['ip_address'] == '127.0.0.1' for row in rows)
         assert {row['openComment']: row['concerns'] for row in rows} == expected
         assert all(row['municipalityEvaluation'] == '' and row['municipality'] == '' for row in rows)
         assert not {'phone', 'deviceId', 'device_hash', 'ip_hash', 'token'} & set(reader.fieldnames)

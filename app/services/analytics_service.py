@@ -1,4 +1,4 @@
-"""Portable indexed SQL filters/aggregates, no identity access."""
+"""Portable indexed SQL filters/aggregates and authenticated response exports."""
 import csv
 import io
 import re
@@ -124,12 +124,13 @@ def safe_csv_value(value):
 
 def csv_columns():
     keys = list(VARIABLE_DEFINITIONS) + ['concernOther', 'openComment']
-    return ['id', 'created_at_utc', 'consent_version'] + keys + ['technical_' + key for key in METADATA_FIELDS]
+    return ['id', 'created_at_utc', 'ip_address', 'consent_version'] + keys + ['technical_' + key for key in METADATA_FIELDS]
 
 
 def csv_record(response):
     keys = list(VARIABLE_DEFINITIONS) + ['concernOther', 'openComment']
-    row = [response.id, response.created_at.isoformat() + 'Z', response.consent_version]
+    # The transient simulation record deliberately has no IP address.
+    row = [response.id, response.created_at.isoformat() + 'Z', getattr(response, 'ip_address', None), response.consent_version]
     for key in keys:
         value = value_at(response.answers, key)
         row.append('|'.join(value) if isinstance(value, list) else value)
@@ -138,7 +139,10 @@ def csv_record(response):
 
 
 def iter_csv(filters):
-    """Stream opinions and descriptive metadata, never phones or identifiers."""
+    """Stream authenticated opinions, submission IP and technical metadata.
+
+    Phone numbers, browser/device identifiers and their HMACs remain excluded.
+    """
     buffer = io.StringIO(newline='')
     writer = csv.writer(buffer, lineterminator='\r\n')
     writer.writerow(csv_columns())
