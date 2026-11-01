@@ -85,7 +85,12 @@ def create_link(data):
     )
     db.session.add(invitation)
     db.session.commit()
-    return {'token': token, 'expiresAt': expires.isoformat() + 'Z'}, cookie
+    result = {'token': token, 'expiresAt': expires.isoformat() + 'Z'}
+    # Only an existing, valid cookie received on THIS request proves the browser
+    # returned its binding. Newly-issued cookies still require session_status.
+    if cookie is None:
+        result['session'] = {'status': 'active', 'expiresAt': result['expiresAt']}
+    return result, cookie
 
 
 def owned_invitation(data, *, lock=False, allow_consumed=False):

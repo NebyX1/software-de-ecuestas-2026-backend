@@ -56,8 +56,19 @@ def create_app(config_name=None, overrides=None):
 
     @app.get('/api/csrf')
     def csrf_token():
-        return jsonify(csrf_token=generate_csrf(),
-                       turnstileSiteKey=app.config['TURNSTILE_SITE_KEY'] if app.config['TURNSTILE_REQUIRED'] else '')
+        response = jsonify(csrf_token=generate_csrf(),
+                           turnstileSiteKey=app.config['TURNSTILE_SITE_KEY'] if app.config['TURNSTILE_REQUIRED'] else '')
+        if request.args.get('entry') == 'survey':
+            # Establish the browser cookie during the existing configuration
+            # request. The following POST must actually return it before the
+            # invitation can include an already-validated session result.
+            from .services.survey_service import BROWSER_COOKIE, _browser_id
+            _, cookie = _browser_id(create=True)
+            if cookie:
+                response.set_cookie(BROWSER_COOKIE, cookie, max_age=365 * 86400,
+                                    httponly=True, secure=app.config.get('SURVEY_COOKIE_SECURE', True),
+                                    samesite='Lax', path='/')
+        return response
 
     @app.template_global()
     def pagination_url(page):
